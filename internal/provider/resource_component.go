@@ -60,6 +60,23 @@ const (
 			}
 		}
 	`
+
+	updateComponentMutation = `
+		mutation UpdateComponent($input: UpdateCompassComponentInput!) {
+			compass {
+				updateComponent(input: $input) {
+					success
+					componentDetails {
+						id
+						name
+						description
+						typeId
+						ownerId
+					}
+				}
+			}
+		}
+	`
 )
 
 type Component struct {
@@ -92,6 +109,15 @@ type DeleteComponentResponse struct {
 		DeleteComponent struct {
 			Success bool `json:"success"`
 		} `json:"deleteComponent"`
+	} `json:"compass"`
+}
+
+type UpdateComponentResponse struct {
+	Compass struct {
+		UpdateComponent struct {
+			Success          bool      `json:"success"`
+			ComponentDetails Component `json:"componentDetails"`
+		} `json:"updateComponent"`
 	} `json:"compass"`
 }
 
@@ -261,18 +287,73 @@ func resourceComponentRead(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceComponentUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	// For now, Compass API doesn't have a direct update mutation in the provided documentation
-	// We'll need to delete and recreate, or implement update if available
-	// This is a placeholder that reads the current state
+	providerConfig := m.(*ProviderConfig)
+	compassClient := providerConfig.Client
+	componentID := d.Id()
 
-	if d.HasChanges("cloud_id") {
+	// cloud_id cannot be changed for existing components
+	if d.HasChange("cloud_id") {
 		return diag.Errorf("cloud_id cannot be changed. Please delete and recreate the component with the new cloud_id.")
 	}
 
-	if d.HasChanges("name", "description", "type", "owner_id") {
-		return diag.Errorf("updating component properties is not supported. Please delete and recreate the component.")
+	// type cannot be changed via updateComponent mutation (not in UpdateCompassComponentInput)
+	if d.HasChange("type") {
+		return diag.Errorf("type cannot be changed. Please delete and recreate the component with the new type.")
 	}
 
+	// Check if any updatable fields have changed
+	if !d.HasChanges("name", "description", "owner_id") {
+		// No changes to updatable fields, just read the state
+		return resourceComponentRead(ctx, d, m)
+	}
+
+	// Build update input
+	input := map[string]interface{}{
+		"id": componentID,
+	}
+
+	if d.HasChange("name") {
+		name := d.Get("name").(string)
+		input["name"] = name
+	}
+
+	if d.HasChange("description") {
+		description := d.Get("description").(string)
+		// Include description even if empty to allow clearing it
+		input["description"] = description
+	}
+
+	if d.HasChange("owner_id") {
+		ownerID := d.Get("owner_id").(string)
+		// Include ownerId even if empty to allow clearing it
+		if ownerID != "" {
+			input["ownerId"] = ownerID
+		} else {
+			// For clearing owner, we might need to pass null explicitly
+			// Try passing empty string first, API should handle it
+			input["ownerId"] = nil
+		}
+	}
+
+	variables := map[string]interface{}{
+		"input": input,
+	}
+
+	data, err := compassClient.ExecuteQuery(ctx, updateComponentMutation, variables)
+	if err != nil {
+		return diag.FromErr(fmt.Errorf("failed to update component: %w", err))
+	}
+
+	var response UpdateComponentResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to unmarshal response: %w", err))
+	}
+
+	if !response.Compass.UpdateComponent.Success {
+		return diag.FromErr(fmt.Errorf("failed to update component: GraphQL mutation returned success=false"))
+	}
+
+	// Update successful, read the latest state
 	return resourceComponentRead(ctx, d, m)
 }
 

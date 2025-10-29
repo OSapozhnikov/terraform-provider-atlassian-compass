@@ -16,7 +16,7 @@ provider "compass" {
 ### Create component
 
 resource "compass_component" "example" {
-  name        = "My Service Component"
-  description = "This is a sample service component"
+  name        = "Terraform Test Component"
+  description = "This is a Terraform test component"
   type        = "SERVICE"
 }

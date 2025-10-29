@@ -44,6 +44,7 @@ terraform-provider-compass.exe
 
 #
 Internal-README.md
+PUBLISHING_CHECKLIST.md
 TODO.md
 *.txt
 *.py

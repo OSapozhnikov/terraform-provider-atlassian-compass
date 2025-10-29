@@ -1,0 +1,107 @@
+# GoReleaser configuration for Terraform Provider
+# See https://goreleaser.com for more information
+
+project_name: terraform-provider-compass
+
+# Build configuration
+builds:
+  - id: terraform-provider-compass
+    binary: terraform-provider-compass
+    main: .
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    goarm:
+      - "7"  # For ARMv7 (32-bit)
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s
+      - -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+
+# Archives configuration
+archives:
+  - id: default
+    builds:
+      - terraform-provider-compass
+    format: zip
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}
+    replacements:
+      darwin: darwin
+      linux: linux
+      windows: windows
+      amd64: amd64
+      386: 386
+      arm64: arm64
+    files:
+      - LICENSE
+      - README.md
+
+# Checksums
+checksum:
+  name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
+  algorithm: sha256
+
+# Signing
+signs:
+  - artifacts: checksum
+    signature: '${artifact}.asc'
+    args:
+      - "--batch"
+      - "--armor"
+      - "--detach-sign"
+      - "${artifact}"
+    ids:
+      - default
+
+# GitHub release
+release:
+  github:
+    owner: OSapozhnikov
+    name: terraform-provider-atlassian-compass
+  prerelease: auto
+  mode: replace
+  header: |
+    ## Changelog
+    
+    Automated release of Terraform Provider for Atlassian Compass {{ .Tag }}
+  footer: |
+    ---
+    
+    **Full Changelog**: https://github.com/OSapozhnikov/terraform-provider-atlassian-compass/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+# Snapshots (for development builds)
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+# Changelog
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - 'Merge pull request'
+      - 'Merge branch'
+
+# Before hooks (run before building)
+before:
+  hooks:
+    - go mod download
+    - go mod verify
+
+# Docker (optional - не потрібно для Terraform провайдера)
+# docker: []
+

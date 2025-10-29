@@ -30,6 +30,19 @@ jobs:
           passphrase: ${{ secrets.PASSPHRASE }}
           # fingerprint is optional - will be auto-detected if not provided
 
+      - name: Get GPG fingerprint
+        id: get_fingerprint
+        run: |
+          # Get the first secret key fingerprint
+          FINGERPRINT=$(gpg --list-secret-keys --keyid-format LONG 2>/dev/null | grep "^sec" | head -1 | awk '{print $2}' | cut -d'/' -f2)
+          if [ -z "$FINGERPRINT" ]; then
+            echo "Error: Could not find GPG fingerprint"
+            gpg --list-secret-keys --keyid-format LONG
+            exit 1
+          fi
+          echo "fingerprint=$FINGERPRINT" >> $GITHUB_OUTPUT
+          echo "GPG Fingerprint: $FINGERPRINT"
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
@@ -37,7 +50,7 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+          GPG_FINGERPRINT: ${{ steps.get_fingerprint.outputs.fingerprint }}
           GPG_PASSPHRASE: ${{ secrets.PASSPHRASE }}
 
       - name: Upload artifacts

@@ -49,15 +49,15 @@ checksum:
 signs:
   - artifacts: checksum
     signature: '${artifact}.sig'
-    cmd: gpg
+    cmd: sh
     args:
-      - "--batch"
-      - "--yes"
-      - "--armor"
-      - "--detach-sign"
-      - "--default-key"
-      - "${.Env.GPG_FINGERPRINT}"
-      - "${artifact}"
+      - -c
+      - |
+        if [ -n "${GPG_FINGERPRINT}" ]; then
+          echo "${GPG_PASSPHRASE}" | gpg --batch --yes --armor --detach-sign --pinentry-mode=loopback --passphrase-fd=0 --default-key "${GPG_FINGERPRINT}" "${artifact}"
+        else
+          echo "${GPG_PASSPHRASE}" | gpg --batch --yes --armor --detach-sign --pinentry-mode=loopback --passphrase-fd=0 "${artifact}"
+        fi
     env:
       - GPG_FINGERPRINT
       - GPG_PASSPHRASE

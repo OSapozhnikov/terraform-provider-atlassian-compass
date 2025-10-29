@@ -48,3 +48,5 @@ PUBLISHING_CHECKLIST.md
 TODO.md
 *.txt
 *.py
+tech/*
+build/*

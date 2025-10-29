@@ -5,8 +5,8 @@ import (
 	"flag"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
 	"github.com/OSapozhnikov/terraform-provider-atlassian-compass/internal/provider"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
 )
 
 func main() {
@@ -29,4 +29,3 @@ func main() {
 
 	plugin.Serve(opts)
 }
-

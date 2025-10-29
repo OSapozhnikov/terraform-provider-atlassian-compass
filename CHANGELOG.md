@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.1] - 2025-10-29
+## [1.0.7] - 2025-10-29
 
 ### Added
 - Initial release of Terraform Provider for Atlassian Compass
@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Environment variable support for credentials
 - Import functionality for existing resources
 - Full GraphQL API integration with Compass
+- Documentation: Updated `docs/index.md` to Terraform provider style (installation, authentication, usage, resources, import) and added GraphQL links.
 
 ### Resources
 - `compass_component` - Manage Compass components
@@ -26,7 +27,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for all link types: DOCUMENT, CHAT_CHANNEL, REPOSITORY, PROJECT, DASHBOARD, ON_CALL, OTHER_LINK
 - Automatic tenant-to-cloud-id resolution
 - Comprehensive error handling and validation
-
-[Unreleased]: https://github.com/OSapozhnikov/terraform-provider-atlassian-compass/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/OSapozhnikov/terraform-provider-atlassian-compass/releases/tag/v1.0.0
-

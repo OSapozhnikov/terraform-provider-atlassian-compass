@@ -1,12 +1,12 @@
 # GoReleaser configuration for Terraform Provider
 # See https://goreleaser.com for more information
 
-project_name: terraform-provider-compass
+project_name: terraform-provider-atlassian-compass
 
 # Build configuration
 builds:
-  - id: terraform-provider-compass
-    binary: terraform-provider-compass
+  - id: terraform-provider-atlassian-compass
+    binary: terraform-provider-atlassian-compass
     main: .
     goos:
       - linux
@@ -29,7 +29,7 @@ builds:
 archives:
   - id: default
     builds:
-      - terraform-provider-compass
+      - terraform-provider-atlassian-compass
     format: zip
     format_overrides:
       - goos: windows

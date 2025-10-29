@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     compass = {
-      source  = "temabit/compass"
+      source  = "OSapozhnikov/atlassian-compass"
       version = "1.0.0"
     }
   }

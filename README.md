@@ -35,7 +35,7 @@ Add the provider to your Terraform configuration:
 terraform {
   required_providers {
     compass = {
-      source  = "temabit/compass"
+      source  = "OSapozhnikov/atlassian-compass"
       version = "~> 1.0"
     }
   }
@@ -47,8 +47,8 @@ terraform {
 1. Download the latest release from the [releases page](https://github.com/OSapozhnikov/terraform-provider-atlassian-compass/releases)
 2. Extract the binary to your Terraform plugins directory:
    - **Windows:** `%APPDATA%\terraform.d\plugins\registry.terraform.io\temabit\compass\1.0.0\windows_amd64\`
-   - **Linux:** `~/.terraform.d/plugins/registry.terraform.io/temabit/compass/1.0.0/linux_amd64/`
-   - **macOS:** `~/.terraform.d/plugins/registry.terraform.io/temabit/compass/1.0.0/darwin_amd64/`
+   - **Linux:** `~/.terraform.d/plugins/registry.terraform.io/OSapozhnikov/atlassian-compass/1.0.0/linux_amd64/`
+   - **macOS:** `~/.terraform.d/plugins/registry.terraform.io/OSapozhnikov/atlassian-compass/1.0.0/darwin_amd64/`
 
 ## Authentication
 
@@ -96,7 +96,7 @@ The provider can automatically detect your Cloud ID from your tenant name. If yo
 terraform {
   required_providers {
     compass = {
-      source  = "temabit/compass"
+      source  = "OSapozhnikov/atlassian-compass"
       version = "~> 1.0"
     }
   }

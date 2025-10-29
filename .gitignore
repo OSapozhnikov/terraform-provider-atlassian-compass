@@ -25,6 +25,7 @@ go.work
 *.tfvars
 .terraform/
 .terraform.lock.hcl
+*.tfplan
 
 # IDE
 .vscode/
@@ -44,3 +45,5 @@ terraform-provider-compass.exe
 #
 README.md
 TODO.md
+*.txt
+*.py

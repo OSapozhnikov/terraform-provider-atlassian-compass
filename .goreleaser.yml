@@ -36,13 +36,6 @@ archives:
         format: zip
     name_template: >-
       {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}
-    replacements:
-      darwin: darwin
-      linux: linux
-      windows: windows
-      amd64: amd64
-      386: 386
-      arm64: arm64
     files:
       - LICENSE
       - README.md

@@ -54,9 +54,9 @@ signs:
       - -c
       - |
         if [ -n "${GPG_FINGERPRINT}" ]; then
-          echo "${GPG_PASSPHRASE}" | gpg --batch --yes --armor --detach-sign --pinentry-mode=loopback --passphrase-fd=0 --default-key "${GPG_FINGERPRINT}" "${artifact}"
+          echo "${GPG_PASSPHRASE}" | gpg --batch --yes --armor --detach-sign --pinentry-mode=loopback --passphrase-fd=0 --default-key "${GPG_FINGERPRINT}" --output "${artifact}.sig" "${artifact}"
         else
-          echo "${GPG_PASSPHRASE}" | gpg --batch --yes --armor --detach-sign --pinentry-mode=loopback --passphrase-fd=0 "${artifact}"
+          echo "${GPG_PASSPHRASE}" | gpg --batch --yes --armor --detach-sign --pinentry-mode=loopback --passphrase-fd=0 --output "${artifact}.sig" "${artifact}"
         fi
     env:
       - GPG_FINGERPRINT

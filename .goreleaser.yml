@@ -15,8 +15,6 @@ builds:
     goarch:
       - amd64
       - arm64
-    goarm:
-      - "7"  # For ARMv7 (32-bit)
     env:
       - CGO_ENABLED=0
     flags:
@@ -54,12 +52,14 @@ checksum:
   name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
   algorithm: sha256
 
-# Signing
+# Signing - Terraform Registry expects .sig extension
 signs:
   - artifacts: checksum
-    signature: '${artifact}.asc'
+    signature: '${artifact}.sig'
+    cmd: gpg
     args:
       - "--batch"
+      - "--yes"
       - "--armor"
       - "--detach-sign"
       - "${artifact}"

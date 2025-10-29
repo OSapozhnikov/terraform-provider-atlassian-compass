@@ -43,7 +43,7 @@ terraform-provider-compass
 terraform-provider-compass.exe
 
 #
-README.md
+Internal-README.md
 TODO.md
 *.txt
 *.py

@@ -44,7 +44,8 @@ func New() *schema.Provider {
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"compass_component": resourceComponent(),
+			"compass_component":      resourceComponent(),
+			"compass_component_link": resourceComponentLink(),
 		},
 		ConfigureContextFunc: configureProvider,
 	}

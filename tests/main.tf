@@ -17,6 +17,13 @@ provider "compass" {
 
 resource "compass_component" "example" {
   name        = "Terraform Test Component"
-  description = "This is a Terraform test component"
+  description = "This is a Terraform created test component"
   type        = "SERVICE"
+}
+
+resource "compass_component_link" "repository" {
+  component_id = compass_component.example.id
+  name         = "Terraform created test component link"
+  type         = "REPOSITORY"
+  url          = var.compass_component_repository_url
 }

@@ -13,3 +13,8 @@ variable "compass_tenant" {
   description = "Tenant name for automatic cloud_id detection (e.g., 'your_site_name' for your_site_name.atlassian.net)"
   type        = string
 }
+
+variable "compass_component_repository_url" {
+  description = "URL of the repository for the component"
+  type        = string
+}

@@ -62,7 +62,12 @@ signs:
       - "--yes"
       - "--armor"
       - "--detach-sign"
+      - "--default-key"
+      - "${.Env.GPG_FINGERPRINT}"
       - "${artifact}"
+    env:
+      - GPG_FINGERPRINT
+      - GPG_PASSPHRASE
     ids:
       - default
 

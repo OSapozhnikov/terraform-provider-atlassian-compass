@@ -9,6 +9,11 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 jobs:
   test:
     name: Run tests
@@ -20,7 +25,10 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.24'
+
+      - name: Install junit converter (go-junit-report)
+        run: go install github.com/jstemmer/go-junit-report/v2@latest
 
       - name: Download dependencies
         run: go mod download
@@ -28,8 +36,14 @@ jobs:
       - name: Verify dependencies
         run: go mod verify
 
-      - name: Run tests
-        run: go test -v ./...
+      - name: Run tests (JSON + coverage + JUnit)
+        run: |
+          mkdir -p artifacts
+          # Run tests once, capture JSON and coverage profile
+          go test -v -covermode=atomic -coverprofile=artifacts/coverage.out -json ./... | tee artifacts/test-report.json | $(go env GOPATH)/bin/go-junit-report -parser gojson > artifacts/junit.xml
+          # Generate coverage summaries
+          go tool cover -func=artifacts/coverage.out > artifacts/coverage.txt
+          go tool cover -html=artifacts/coverage.out -o artifacts/coverage.html
 
       - name: Run go vet
         run: go vet ./...
@@ -44,4 +58,22 @@ jobs:
 
       - name: Build
         run: go build -v ./...
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-artifacts
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish Unit Test Results (JUnit)
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: artifacts/junit.xml
+          # Avoid creating check runs to prevent 403 on forks or restricted tokens
+          check_run: false
+          # Always provide a job summary in the workflow run
+          job_summary: true
 

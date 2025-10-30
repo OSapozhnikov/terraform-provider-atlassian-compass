@@ -9,6 +9,11 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 jobs:
   test:
     name: Run tests
@@ -67,4 +72,8 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           files: artifacts/junit.xml
+          # Avoid creating check runs to prevent 403 on forks or restricted tokens
+          check_run: false
+          # Always provide a job summary in the workflow run
+          job_summary: true
 

@@ -86,6 +86,7 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 			if typeId == "" {
 				typeId = "SERVICE"
 			}
+			slug, _ := vars["slug"].(string)
 			id := "cmp-1"
 			state.mu.Lock()
 			state.components[id] = map[string]interface{}{
@@ -94,6 +95,7 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 				"description": description,
 				"typeId":      typeId,
 				"ownerId":     ownerId,
+				"slug":        slug,
 			}
 			state.mu.Unlock()
 
@@ -149,11 +151,17 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 					comp["description"] = v
 				}
 				if _, exists := input["ownerId"]; exists {
-					// may be string or nil
 					if v, ok := input["ownerId"].(string); ok {
 						comp["ownerId"] = v
 					} else {
 						comp["ownerId"] = ""
+					}
+				}
+				if _, exists := input["slug"]; exists {
+					if v, ok := input["slug"].(string); ok {
+						comp["slug"] = v
+					} else {
+						comp["slug"] = ""
 					}
 				}
 				state.components[id] = comp

@@ -14,7 +14,7 @@ import (
 
 const (
 	createComponentMutation = `
-		mutation CreateComponent($cloudId: ID!, $name: String!, $description: String, $typeId: ID!, $ownerId: ID) {
+		mutation CreateComponent($cloudId: ID!, $name: String!, $description: String, $typeId: ID!, $ownerId: ID, $slug: String) {
 			compass {
 				createComponent(
 					cloudId: $cloudId
@@ -23,6 +23,7 @@ const (
 						description: $description
 						typeId: $typeId
 						ownerId: $ownerId
+						slug: $slug
 					}
 				) {
 					success
@@ -32,6 +33,7 @@ const (
 						description
 						typeId
 						ownerId
+						slug
 					}
 				}
 			}
@@ -48,6 +50,7 @@ const (
 						description
 						typeId
 						ownerId
+						slug
 					}
 				}
 			}
@@ -75,6 +78,7 @@ const (
 						description
 						typeId
 						ownerId
+						slug
 					}
 				}
 			}
@@ -89,6 +93,7 @@ type Component struct {
 	Type         string                 `json:"type,omitempty"`   // Enum string (SERVICE, LIBRARY, etc.) - used in create
 	TypeID       string                 `json:"typeId,omitempty"` // Type ID returned from API - used in read
 	OwnerID      string                 `json:"ownerId,omitempty"`
+	Slug         string                 `json:"slug,omitempty"`
 	CustomFields map[string]interface{} `json:"customFields,omitempty"`
 }
 
@@ -196,6 +201,11 @@ func resourceComponent() *schema.Resource {
 				Optional:    true,
 				Description: "Owner ID (Atlassian account ID) of the Compass component",
 			},
+			"slug": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "A unique identifier for the component. If not set, the API receives null.",
+			},
 		},
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
@@ -257,6 +267,12 @@ func resourceComponentCreate(ctx context.Context, d *schema.ResourceData, m inte
 
 	if ownerID != "" {
 		variables["ownerId"] = ownerID
+	}
+
+	if v, ok := d.GetOk("slug"); ok && v.(string) != "" {
+		variables["slug"] = v.(string)
+	} else {
+		variables["slug"] = nil
 	}
 
 	data, err := compassClient.ExecuteQuery(ctx, createComponentMutation, variables)
@@ -324,6 +340,7 @@ func resourceComponentRead(ctx context.Context, d *schema.ResourceData, m interf
 	if component.OwnerID != "" {
 		d.Set("owner_id", component.OwnerID)
 	}
+	d.Set("slug", component.Slug)
 
 	return nil
 }
@@ -344,7 +361,7 @@ func resourceComponentUpdate(ctx context.Context, d *schema.ResourceData, m inte
 	}
 
 	// Check if any updatable fields have changed
-	if !d.HasChanges("name", "description", "owner_id") {
+	if !d.HasChanges("name", "description", "owner_id", "slug") {
 		// No changes to updatable fields, just read the state
 		return resourceComponentRead(ctx, d, m)
 	}
@@ -371,9 +388,15 @@ func resourceComponentUpdate(ctx context.Context, d *schema.ResourceData, m inte
 		if ownerID != "" {
 			input["ownerId"] = ownerID
 		} else {
-			// For clearing owner, we might need to pass null explicitly
-			// Try passing empty string first, API should handle it
 			input["ownerId"] = nil
+		}
+	}
+
+	if d.HasChange("slug") {
+		if v, ok := d.GetOk("slug"); ok && v.(string) != "" {
+			input["slug"] = v.(string)
+		} else {
+			input["slug"] = nil
 		}
 	}
 

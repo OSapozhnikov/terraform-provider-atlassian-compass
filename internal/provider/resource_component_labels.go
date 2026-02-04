@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -384,19 +386,47 @@ func resourceComponentLabelsDelete(ctx context.Context, d *schema.ResourceData, 
 	return nil
 }
 
+// cloudIDRegex matches Atlassian cloud ID (UUID v4 format: 8-4-4-4-12 hex).
+var cloudIDRegex = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+// parseComponentLabelsImportID splits import id into component_id and optional cloud_id.
+// Formats: "component_id" or "component_id:cloud_id" or "component_id/cloud_id".
+// When component_id is an ARI (e.g. ari:cloud:compass:...:component/123), we only split
+// if the suffix after the last ':' or '/' looks like a cloud_id (UUID); otherwise the full id is component_id.
+func parseComponentLabelsImportID(id string) (componentID, cloudID string) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return "", ""
+	}
+	lastColon := strings.LastIndex(id, ":")
+	lastSlash := strings.LastIndex(id, "/")
+	sepPos := lastColon
+	if lastSlash > sepPos {
+		sepPos = lastSlash
+	}
+	if sepPos < 0 {
+		return id, ""
+	}
+	suffix := id[sepPos+1:]
+	if cloudIDRegex.MatchString(suffix) {
+		return id[:sepPos], suffix
+	}
+	return id, ""
+}
+
 func resourceComponentLabelsImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	id := d.Id()
-	componentID := id
-	// Allow component_id or component_id:cloud_id (use last separator)
-	for i := len(id) - 1; i >= 0; i-- {
-		if id[i] == ':' || id[i] == '/' {
-			componentID = id[:i]
-			break
-		}
+	componentID, cloudID := parseComponentLabelsImportID(d.Id())
+	if componentID == "" {
+		return nil, fmt.Errorf("import id cannot be empty")
 	}
 	d.SetId(componentID)
 	if err := d.Set("component_id", componentID); err != nil {
 		return nil, err
+	}
+	if cloudID != "" {
+		if err := d.Set("cloud_id", cloudID); err != nil {
+			return nil, err
+		}
 	}
 	diags := resourceComponentLabelsRead(ctx, d, m)
 	if diags.HasError() {

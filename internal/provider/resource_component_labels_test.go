@@ -95,3 +95,52 @@ resource "compass_component_labels" "test" {
 		},
 	})
 }
+
+func TestParseComponentLabelsImportID(t *testing.T) {
+	tests := []struct {
+		name      string
+		id        string
+		wantComp  string
+		wantCloud string
+	}{
+		{
+			name:      "ARI only - no truncation at slash",
+			id:        "ari:cloud:compass:abc:component/123",
+			wantComp:  "ari:cloud:compass:abc:component/123",
+			wantCloud: "",
+		},
+		{
+			name:      "ARI with cloud_id suffix (colon)",
+			id:        "ari:cloud:compass:abc:component/123:a1250265-f505-432c-90ff-5d28665aa42c",
+			wantComp:  "ari:cloud:compass:abc:component/123",
+			wantCloud: "a1250265-f505-432c-90ff-5d28665aa42c",
+		},
+		{
+			name:      "ARI with cloud_id suffix (slash)",
+			id:        "ari:cloud:compass:abc:component/123/a1250265-f505-432c-90ff-5d28665aa42c",
+			wantComp:  "ari:cloud:compass:abc:component/123",
+			wantCloud: "a1250265-f505-432c-90ff-5d28665aa42c",
+		},
+		{
+			name:      "simple id",
+			id:        "cmp-1",
+			wantComp:  "cmp-1",
+			wantCloud: "",
+		},
+		{
+			name:      "simple id with cloud_id",
+			id:        "cmp-1:a1250265-f505-432c-90ff-5d28665aa42c",
+			wantComp:  "cmp-1",
+			wantCloud: "a1250265-f505-432c-90ff-5d28665aa42c",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotComp, gotCloud := parseComponentLabelsImportID(tt.id)
+			if gotComp != tt.wantComp || gotCloud != tt.wantCloud {
+				t.Errorf("parseComponentLabelsImportID(%q) = component_id %q, cloud_id %q; want %q, %q",
+					tt.id, gotComp, gotCloud, tt.wantComp, tt.wantCloud)
+			}
+		})
+	}
+}

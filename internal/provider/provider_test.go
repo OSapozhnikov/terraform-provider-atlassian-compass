@@ -51,6 +51,26 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 
 		q := req.Query
 
+		// Component types lookup
+		if strings.Contains(q, "componentTypes(") {
+			// Return a minimal but valid componentTypes payload that matches
+			// the shape expected by the data source query.
+			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+				"compass": map[string]interface{}{
+					"componentTypes": map[string]interface{}{
+						"__typename": "CompassComponentTypeConnection",
+						"nodes": []map[string]interface{}{
+							{
+								"id":   "type-service",
+								"name": "Service",
+							},
+						},
+					},
+				},
+			}})
+			return
+		}
+
 		// Tenant to cloudId lookup
 		if strings.Contains(q, "tenantContexts") {
 			// Always return one context with the configured cloudID

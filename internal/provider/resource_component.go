@@ -4,21 +4,24 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
 
+	"github.com/OSapozhnikov/terraform-provider-atlassian-compass/internal/client"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 const (
 	createComponentMutation = `
-		mutation CreateComponent($cloudId: ID!, $name: String!, $description: String, $type: CompassComponentType!, $ownerId: ID) {
+		mutation CreateComponent($cloudId: ID!, $name: String!, $description: String, $typeId: ID!, $ownerId: ID) {
 			compass {
 				createComponent(
 					cloudId: $cloudId
 					input: {
 						name: $name
 						description: $description
-						type: $type
+						typeId: $typeId
 						ownerId: $ownerId
 					}
 				) {
@@ -121,6 +124,45 @@ type UpdateComponentResponse struct {
 	} `json:"compass"`
 }
 
+// resolveTypeToTypeID maps a user-provided type (id or name) to the Compass typeId.
+// It tries exact id match, then exact name match, then case-insensitive name match.
+// If multiple types match the name (case-insensitive), it returns an error.
+func resolveTypeToTypeID(types []client.ComponentTypeInfo, userType string) (string, error) {
+	// 1. Exact id match
+	for _, t := range types {
+		if t.ID == userType {
+			return t.ID, nil
+		}
+	}
+	// 2. Exact name match
+	for _, t := range types {
+		if t.Name == userType {
+			return t.ID, nil
+		}
+	}
+	// 3. Case-insensitive name match (fail if multiple)
+	userLower := strings.ToLower(userType)
+	var match *client.ComponentTypeInfo
+	for i := range types {
+		if strings.ToLower(types[i].Name) == userLower {
+			if match != nil {
+				return "", fmt.Errorf("ambiguous type %q: multiple component types match (id %s and %s); use type id instead", userType, match.ID, types[i].ID)
+			}
+			match = &types[i]
+		}
+	}
+	if match != nil {
+		return match.ID, nil
+	}
+	// 4. No match - build helpful error
+	ids := make([]string, 0, len(types))
+	for _, t := range types {
+		ids = append(ids, fmt.Sprintf("%s (%s)", t.ID, t.Name))
+	}
+	sort.Strings(ids)
+	return "", fmt.Errorf("no component type found for %q; available for this site: %s", userType, strings.Join(ids, ", "))
+}
+
 func resourceComponent() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceComponentCreate,
@@ -147,7 +189,7 @@ func resourceComponent() *schema.Resource {
 			"type": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Type of the Compass component. Valid values: SERVICE, LIBRARY, APPLICATION, INFRASTRUCTURE, DATABASE, DOCUMENTATION",
+				Description: "Type of the Compass component: use the type id (e.g. SERVICE, LIBRARY, APPLICATION, or full ARI for custom types) or the human-readable name (e.g. Service, Domain). Resolved to typeId via the Compass componentTypes API. Use data.compass_component_types to list available types.",
 			},
 			"owner_id": {
 				Type:        schema.TypeString,
@@ -187,26 +229,26 @@ func resourceComponentCreate(ctx context.Context, d *schema.ResourceData, m inte
 
 	name := d.Get("name").(string)
 	description := d.Get("description").(string)
-	componentType := d.Get("type").(string)
+	componentType := strings.TrimSpace(d.Get("type").(string))
 	ownerID := d.Get("owner_id").(string)
 
-	// Validate component type - must be valid CompassComponentType enum value
-	validTypes := map[string]bool{
-		"SERVICE":        true,
-		"LIBRARY":        true,
-		"APPLICATION":    true,
-		"INFRASTRUCTURE": true,
-		"DATABASE":       true,
-		"DOCUMENTATION":  true,
+	if componentType == "" {
+		return diag.Errorf("type is required and cannot be empty")
 	}
-	if !validTypes[componentType] {
-		return diag.Errorf("invalid component type: %s. Valid values are: SERVICE, LIBRARY, APPLICATION, INFRASTRUCTURE, DATABASE, DOCUMENTATION", componentType)
+
+	types, err := compassClient.GetComponentTypes(ctx, cloudID)
+	if err != nil {
+		return diag.FromErr(fmt.Errorf("failed to resolve component type: %w", err))
+	}
+	typeID, err := resolveTypeToTypeID(types, componentType)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
 	variables := map[string]interface{}{
 		"cloudId": cloudID,
 		"name":    name,
-		"type":    componentType,
+		"typeId":  typeID,
 	}
 
 	if description != "" {

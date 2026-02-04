@@ -41,13 +41,7 @@ resource "compass_component" "example" {
 The following arguments are supported:
 
 * `name` - (Required) Name of the Compass component.
-* `type` - (Required) Type of the Compass component. Valid values are:
-  * `SERVICE` - A service component
-  * `LIBRARY` - A library component
-  * `APPLICATION` - An application component
-  * `INFRASTRUCTURE` - An infrastructure component
-  * `DATABASE` - A database component
-  * `DOCUMENTATION` - A documentation component
+* `type` - (Required) Type of the Compass component. You can pass either the **type id** (e.g. `SERVICE`, `LIBRARY`, `APPLICATION`, `CAPABILITY`, `CLOUD_RESOURCE`, `DATA_PIPELINE`, `MACHINE_LEARNING_MODEL`, `UI_ELEMENT`, `WEBSITE`, `OTHER`, or the full ARI for custom types) or the **human-readable name** (e.g. `Service`, `Domain`, `Product`). The provider resolves this to the Compass `typeId` via the componentTypes GraphQL API. Use the [`compass_component_types`](../data-sources/component_types.md) data source to list available types for your site.
 * `description` - (Optional) Description of the Compass component.
 * `owner_id` - (Optional) Owner ID (Atlassian account ID) of the Compass component. This should be the account ID of the user or team that owns the component.
 * `cloud_id` - (Optional, Computed) Cloud ID of the Atlassian site (e.g., `jira-12345678-1234-1234-1234-123456789012`). If not provided, will be automatically detected from the `tenant` configured in the provider.

@@ -53,17 +53,13 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 
 		// Component types lookup
 		if strings.Contains(q, "componentTypes(") {
-			// Return a minimal but valid componentTypes payload that matches
-			// the shape expected by the data source query.
+			// Return a minimal but valid componentTypes payload (id matches real API: SERVICE, etc.).
 			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
 				"compass": map[string]interface{}{
 					"componentTypes": map[string]interface{}{
 						"__typename": "CompassComponentTypeConnection",
 						"nodes": []map[string]interface{}{
-							{
-								"id":   "type-service",
-								"name": "Service",
-							},
+							{"id": "SERVICE", "name": "Service"},
 						},
 					},
 				},
@@ -86,16 +82,18 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 			name, _ := vars["name"].(string)
 			description, _ := vars["description"].(string)
 			ownerId, _ := vars["ownerId"].(string)
-			// Use a deterministic ID for simplicity
+			typeId, _ := vars["typeId"].(string)
+			if typeId == "" {
+				typeId = "SERVICE"
+			}
 			id := "cmp-1"
 			state.mu.Lock()
 			state.components[id] = map[string]interface{}{
 				"id":          id,
 				"name":        name,
 				"description": description,
-				// API returns typeId in read; we store the provided type into TypeID for later read mapping behavior
-				"typeId":  "type-service",
-				"ownerId": ownerId,
+				"typeId":      typeId,
+				"ownerId":     ownerId,
 			}
 			state.mu.Unlock()
 

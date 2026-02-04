@@ -136,7 +136,7 @@ See [component documentation](docs/resources/component.md) for full details.
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `name` | `string` | Yes | Name of the Compass component |
-| `type` | `string` | Yes | Type of component. Valid values: `SERVICE`, `LIBRARY`, `APPLICATION`, `INFRASTRUCTURE`, `DATABASE`, `DOCUMENTATION` |
+| `type` | `string` | Yes | Type of component. See the component resource docs and the `compass_component_types` data source for the available types in your Compass site. |
 | `description` | `string` | No | Description of the component |
 | `owner_id` | `string` | No | Owner ID (Atlassian account ID) of the component |
 | `cloud_id` | `string` | No | Cloud ID. If not provided, will be auto-detected from tenant |
@@ -171,6 +171,29 @@ See [component_link documentation](docs/resources/component_link.md) for full de
 |------|------|-------------|
 | `id` | `string` | The unique identifier (ID) of the link |
 | `cloud_id` | `string` | Cloud ID (computed if not provided) |
+
+## Data Sources
+
+### `compass_component_types`
+
+Data source for querying available component types in Atlassian Compass for a given site.
+
+See [component_types documentation](docs/resources/component_types.md) for full details.
+
+**Arguments:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `cloud_id` | `string` | No | Cloud ID of the Atlassian site. If not provided, will be auto-detected from tenant. |
+| `id` | `string` | No | Optional filter to return only the component type with this id (enum key for built-ins, ARI for custom types). |
+| `name` | `string` | No | Optional filter to return only component types with this human-readable name (for example `Service`, `Domain`). |
+
+**Attributes:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `cloud_id` | `string` | Cloud ID used when querying the GraphQL API. |
+| `types` | `list(object)` | List of component types for the given `cloud_id`, each with `id` and `name`. |
 
 ## Provider Configuration
 

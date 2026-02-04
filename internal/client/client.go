@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -23,6 +24,16 @@ type Client struct {
 	email      string
 	apiToken   string
 	httpClient *http.Client
+
+	// componentTypesCache caches component types per cloudID for the process lifetime.
+	componentTypesCache   map[string][]ComponentTypeInfo
+	componentTypesCacheMu sync.RWMutex
+}
+
+// ComponentTypeInfo holds id and name of a Compass component type (built-in or custom).
+type ComponentTypeInfo struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type GraphQLRequest struct {
@@ -59,12 +70,11 @@ func NewClient(baseURL, email, apiToken string) (*Client, error) {
 	}
 
 	return &Client{
-		baseURL:  baseURL,
-		email:    email,
-		apiToken: apiToken,
-		httpClient: &http.Client{
-			Timeout: defaultTimeout,
-		},
+		baseURL:             baseURL,
+		email:               email,
+		apiToken:            apiToken,
+		httpClient:          &http.Client{Timeout: defaultTimeout},
+		componentTypesCache: make(map[string][]ComponentTypeInfo),
 	}, nil
 }
 
@@ -175,4 +185,69 @@ func (c *Client) GetCloudIDByTenant(ctx context.Context, tenant string) (string,
 	}
 
 	return response.TenantContexts[0].CloudID, nil
+}
+
+const componentTypesQuery = `
+	query GetComponentTypes($cloudId: ID!) {
+		compass {
+			componentTypes(cloudId: $cloudId) {
+				__typename
+				... on CompassComponentTypeConnection {
+					nodes {
+						id
+						name
+					}
+				}
+				... on QueryError {
+					message
+				}
+			}
+		}
+	}
+`
+
+type componentTypesPayload struct {
+	Typename string              `json:"__typename"`
+	Nodes    []ComponentTypeInfo `json:"nodes,omitempty"`
+	Message  string              `json:"message,omitempty"`
+}
+
+type componentTypesResponse struct {
+	Compass struct {
+		ComponentTypes componentTypesPayload `json:"componentTypes"`
+	} `json:"compass"`
+}
+
+// GetComponentTypes returns the list of component types for the given cloudID.
+// Results are cached per cloudID for the lifetime of the client.
+func (c *Client) GetComponentTypes(ctx context.Context, cloudID string) ([]ComponentTypeInfo, error) {
+	if cloudID == "" {
+		return nil, fmt.Errorf("cloudID is required")
+	}
+	c.componentTypesCacheMu.RLock()
+	if cached, ok := c.componentTypesCache[cloudID]; ok {
+		c.componentTypesCacheMu.RUnlock()
+		return cached, nil
+	}
+	c.componentTypesCacheMu.RUnlock()
+
+	data, err := c.ExecuteQuery(ctx, componentTypesQuery, map[string]interface{}{"cloudId": cloudID})
+	if err != nil {
+		return nil, fmt.Errorf("componentTypes query: %w", err)
+	}
+	var resp componentTypesResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("componentTypes response: %w", err)
+	}
+	payload := resp.Compass.ComponentTypes
+	if payload.Typename == "QueryError" && payload.Message != "" {
+		return nil, fmt.Errorf("componentTypes error: %s", payload.Message)
+	}
+	if len(payload.Nodes) == 0 {
+		return nil, fmt.Errorf("no component types for cloud_id %s", cloudID)
+	}
+	c.componentTypesCacheMu.Lock()
+	c.componentTypesCache[cloudID] = payload.Nodes
+	c.componentTypesCacheMu.Unlock()
+	return payload.Nodes, nil
 }

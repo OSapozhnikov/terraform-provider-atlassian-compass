@@ -91,10 +91,15 @@ resource "compass_component_link" "repository" {
 
 ## Resources
 
-- `compass_component` — Manages a Compass component
-  - Full docs: [`docs/resources/component.md`](./resources/component.md)
-- `compass_component_link` — Manages a link attached to a Compass component
-  - Full docs: [`docs/resources/component_link.md`](./resources/component_link.md)
+- `compass_component` — Manages a Compass component  
+  - Full docs: [`resources/component.md`](./resources/component.md)
+- `compass_component_link` — Manages a link attached to a Compass component  
+  - Full docs: [`resources/component_link.md`](./resources/component_link.md)
+
+## Data Sources
+
+- `compass_component_types` — Lists available component types for a Compass site and allows lookups by id or name  
+  - Full docs: [`data-sources/component_types.md`](./data-sources/component_types.md)
 
 Quick references:
 

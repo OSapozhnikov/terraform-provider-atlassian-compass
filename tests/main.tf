@@ -1,9 +1,10 @@
 terraform {
+  required_version = ">= 1.14"
   required_providers {
-    compass = {
-      source  = "OSapozhnikov/atlassian-compass"
-      version = "1.0.7"
-    }
+    # compass = {
+    #   source  = "OSapozhnikov/atlassian-compass"
+    #   version = "1.0.8"
+    # }
   }
 }
 
@@ -18,7 +19,7 @@ provider "compass" {
 resource "compass_component" "example" {
   name        = "Terraform Test Library"
   description = "This is a Terraform created test LIBRARY component"
-  type        = "LIBRARY"
+  type        = "CAPABILITY"
 }
 
 resource "compass_component_link" "repository" {
@@ -26,4 +27,29 @@ resource "compass_component_link" "repository" {
   name         = "Terraform created test component link"
   type         = "REPOSITORY"
   url          = var.compass_component_repository_url
+}
+
+# All component types
+data "compass_component_types" "all" {}
+
+output "component_types" {
+  value = data.compass_component_types.all.types
+}
+
+# Component type by id
+data "compass_component_types" "by_id" {
+  id = "SERVICE"
+}
+
+output "by_id" {
+  value = data.compass_component_types.by_id.types
+}
+
+# Component type by name
+data "compass_component_types" "by_name" {
+  name = "Domain"
+}
+
+output "by_name" {
+  value = data.compass_component_types.by_name.types
 }

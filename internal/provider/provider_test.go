@@ -51,6 +51,22 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 
 		q := req.Query
 
+		// Component types lookup
+		if strings.Contains(q, "componentTypes(") {
+			// Return a minimal but valid componentTypes payload (id matches real API: SERVICE, etc.).
+			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+				"compass": map[string]interface{}{
+					"componentTypes": map[string]interface{}{
+						"__typename": "CompassComponentTypeConnection",
+						"nodes": []map[string]interface{}{
+							{"id": "SERVICE", "name": "Service"},
+						},
+					},
+				},
+			}})
+			return
+		}
+
 		// Tenant to cloudId lookup
 		if strings.Contains(q, "tenantContexts") {
 			// Always return one context with the configured cloudID
@@ -66,16 +82,20 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 			name, _ := vars["name"].(string)
 			description, _ := vars["description"].(string)
 			ownerId, _ := vars["ownerId"].(string)
-			// Use a deterministic ID for simplicity
+			typeId, _ := vars["typeId"].(string)
+			if typeId == "" {
+				typeId = "SERVICE"
+			}
+			slug, _ := vars["slug"].(string)
 			id := "cmp-1"
 			state.mu.Lock()
 			state.components[id] = map[string]interface{}{
 				"id":          id,
 				"name":        name,
 				"description": description,
-				// API returns typeId in read; we store the provided type into TypeID for later read mapping behavior
-				"typeId":  "type-service",
-				"ownerId": ownerId,
+				"typeId":      typeId,
+				"ownerId":     ownerId,
+				"slug":        slug,
 			}
 			state.mu.Unlock()
 
@@ -131,11 +151,17 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 					comp["description"] = v
 				}
 				if _, exists := input["ownerId"]; exists {
-					// may be string or nil
 					if v, ok := input["ownerId"].(string); ok {
 						comp["ownerId"] = v
 					} else {
 						comp["ownerId"] = ""
+					}
+				}
+				if _, exists := input["slug"]; exists {
+					if v, ok := input["slug"].(string); ok {
+						comp["slug"] = v
+					} else {
+						comp["slug"] = ""
 					}
 				}
 				state.components[id] = comp

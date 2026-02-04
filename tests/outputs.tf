@@ -39,3 +39,9 @@ output "component_link_type" {
   description = "Type of the created component link"
   value       = compass_component_link.repository.type
 }
+
+# Component Labels
+output "component_labels" {
+  description = "Labels of the created component"
+  value       = compass_component_labels.example.labels
+}

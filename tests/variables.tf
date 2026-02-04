@@ -18,3 +18,13 @@ variable "compass_component_repository_url" {
   description = "URL of the repository for the component"
   type        = string
 }
+
+variable "compass_component_target_depends" {
+  description = "ID of the target component for the depends relationship"
+  type        = string
+}
+
+variable "compass_component_target_child" {
+  description = "ID of the target component for the child relationship"
+  type        = string
+ }

@@ -20,6 +20,12 @@ resource "compass_component" "example" {
   name        = "Terraform Test Library"
   description = "This is a Terraform created test LIBRARY component"
   type        = "CAPABILITY"
+  slug        = "terraform-test-capability"
+}
+
+resource "compass_component_labels" "example" {
+  component_id = compass_component.example.id
+  labels  = ["terraform-test-label", "terraform-test-label-3"]
 }
 
 resource "compass_component_link" "repository" {
@@ -29,27 +35,14 @@ resource "compass_component_link" "repository" {
   url          = var.compass_component_repository_url
 }
 
-# All component types
-data "compass_component_types" "all" {}
-
-output "component_types" {
-  value = data.compass_component_types.all.types
+resource "compass_component_relationship" "depends_on" {
+  start_node_id     = compass_component.example.id
+  end_node_id       = var.compass_component_target_depends
+  relationship_type = "DEPENDS_ON"
 }
 
-# Component type by id
-data "compass_component_types" "by_id" {
-  id = "SERVICE"
-}
-
-output "by_id" {
-  value = data.compass_component_types.by_id.types
-}
-
-# Component type by name
-data "compass_component_types" "by_name" {
-  name = "Domain"
-}
-
-output "by_name" {
-  value = data.compass_component_types.by_name.types
+resource "compass_component_relationship" "child_of" {
+  start_node_id     = compass_component.example.id
+  end_node_id       = var.compass_component_target_child
+  relationship_type = "CHILD_OF"
 }

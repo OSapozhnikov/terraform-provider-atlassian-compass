@@ -2,6 +2,7 @@ package provider
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,17 +11,23 @@ import (
 
 // mockState holds simple in-memory data to emulate GraphQL resources.
 type mockState struct {
-	mu         sync.Mutex
-	cloudID    string
-	components map[string]map[string]interface{}
-	links      map[string]map[string]interface{}
+	mu              sync.Mutex
+	cloudID         string
+	components      map[string]map[string]interface{}
+	links           map[string]map[string]interface{}
+	componentLabels map[string][]string               // componentId -> label names
+	relationships   map[string]map[string]interface{} // relationshipId -> { id, startNodeId, endNodeId, type }
+	nextRelID       int
 }
 
 func newMockState() *mockState {
 	return &mockState{
-		cloudID:    "cloud-123",
-		components: map[string]map[string]interface{}{},
-		links:      map[string]map[string]interface{}{},
+		cloudID:         "cloud-123",
+		components:      map[string]map[string]interface{}{},
+		links:           map[string]map[string]interface{}{},
+		componentLabels: map[string][]string{},
+		relationships:   map[string]map[string]interface{}{},
+		nextRelID:       1,
 	}
 }
 
@@ -104,6 +111,33 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 					"createComponent": map[string]interface{}{
 						"success":          true,
 						"componentDetails": state.components[id],
+					},
+				},
+			}})
+			return
+		}
+
+		// Get component with labels (used by compass_component_labels)
+		if strings.Contains(q, "GetComponentLabels") && strings.Contains(q, "labels {") {
+			id := ""
+			if v, ok := req.Variables["id"].(string); ok {
+				id = v
+			}
+			state.mu.Lock()
+			labels := state.componentLabels[id]
+			if labels == nil {
+				labels = []string{}
+			}
+			labelMaps := make([]map[string]string, 0, len(labels))
+			for _, n := range labels {
+				labelMaps = append(labelMaps, map[string]string{"name": n})
+			}
+			state.mu.Unlock()
+			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+				"compass": map[string]interface{}{
+					"component": map[string]interface{}{
+						"id":     id,
+						"labels": labelMaps,
 					},
 				},
 			}})
@@ -307,6 +341,158 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
 				"compass": map[string]interface{}{
 					"deleteComponentLink": map[string]interface{}{"success": true},
+				},
+			}})
+			return
+		}
+
+		// Add component labels
+		if strings.Contains(q, "addComponentLabels(") {
+			input, _ := req.Variables["input"].(map[string]interface{})
+			componentId, _ := input["componentId"].(string)
+			labelNamesRaw, _ := input["labelNames"].([]interface{})
+			state.mu.Lock()
+			cur := state.componentLabels[componentId]
+			seen := make(map[string]bool)
+			for _, s := range cur {
+				seen[s] = true
+			}
+			for _, v := range labelNamesRaw {
+				if s, ok := v.(string); ok && s != "" && !seen[s] {
+					seen[s] = true
+					cur = append(cur, s)
+				}
+			}
+			state.componentLabels[componentId] = cur
+			state.mu.Unlock()
+			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+				"compass": map[string]interface{}{
+					"addComponentLabels": map[string]interface{}{"success": true},
+				},
+			}})
+			return
+		}
+
+		// Remove component labels
+		if strings.Contains(q, "removeComponentLabels(") {
+			input, _ := req.Variables["input"].(map[string]interface{})
+			componentId, _ := input["componentId"].(string)
+			labelNamesRaw, _ := input["labelNames"].([]interface{})
+			toRemove := make(map[string]bool)
+			for _, v := range labelNamesRaw {
+				if s, ok := v.(string); ok {
+					toRemove[s] = true
+				}
+			}
+			state.mu.Lock()
+			cur := state.componentLabels[componentId]
+			var newCur []string
+			for _, s := range cur {
+				if !toRemove[s] {
+					newCur = append(newCur, s)
+				}
+			}
+			state.componentLabels[componentId] = newCur
+			state.mu.Unlock()
+			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+				"compass": map[string]interface{}{
+					"removeComponentLabels": map[string]interface{}{"success": true},
+				},
+			}})
+			return
+		}
+
+		// Create relationship
+		if strings.Contains(q, "createRelationship(") {
+			input, _ := req.Variables["input"].(map[string]interface{})
+			startNodeId, _ := input["startNodeId"].(string)
+			endNodeId, _ := input["endNodeId"].(string)
+			relType := ""
+			if s, ok := input["relationshipType"].(string); ok {
+				relType = s
+			} else if rt, ok := input["relationshipType"].(map[string]interface{}); ok {
+				relType, _ = rt["type"].(string)
+			}
+			state.mu.Lock()
+			relID := fmt.Sprintf("rel-%d", state.nextRelID)
+			state.nextRelID++
+			state.relationships[relID] = map[string]interface{}{
+				"id":          relID,
+				"startNodeId": startNodeId,
+				"endNodeId":   endNodeId,
+				"type":        relType,
+			}
+			state.mu.Unlock()
+			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+				"compass": map[string]interface{}{
+					"createRelationship": map[string]interface{}{
+						"success": true,
+						"createdCompassRelationship": map[string]interface{}{
+							"id":               relID,
+							"startNodeId":      startNodeId,
+							"endNodeId":        endNodeId,
+							"relationshipType": relType,
+						},
+					},
+				},
+			}})
+			return
+		}
+
+		// Get component relationships (GetComponentRelationships) — CompassRelationshipConnectionResult with edges
+		if strings.Contains(q, "GetComponentRelationships") && strings.Contains(q, "relationships") {
+			componentId, _ := req.Variables["componentId"].(string)
+			state.mu.Lock()
+			var edges []map[string]interface{}
+			for _, rel := range state.relationships {
+				if rel["startNodeId"] == componentId {
+					edges = append(edges, map[string]interface{}{
+						"node": map[string]interface{}{
+							"id":               rel["id"],
+							"relationshipType": rel["type"],
+							"startNode":        map[string]interface{}{"id": rel["startNodeId"]},
+							"endNode":          map[string]interface{}{"id": rel["endNodeId"]},
+						},
+					})
+				}
+			}
+			state.mu.Unlock()
+			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+				"compass": map[string]interface{}{
+					"component": map[string]interface{}{
+						"id": componentId,
+						"relationships": map[string]interface{}{
+							"edges": edges,
+						},
+					},
+				},
+			}})
+			return
+		}
+
+		// Delete relationship
+		if strings.Contains(q, "deleteRelationship(") {
+			input, _ := req.Variables["input"].(map[string]interface{})
+			startNodeId, _ := input["startNodeId"].(string)
+			endNodeId, _ := input["endNodeId"].(string)
+			relType := ""
+			if s, ok := input["relationshipType"].(string); ok {
+				relType = s
+			} else if rt, ok := input["relationshipType"].(map[string]interface{}); ok {
+				relType, _ = rt["type"].(string)
+			}
+			state.mu.Lock()
+			// Find and delete relationship by startNodeId, endNodeId, and type
+			for relID, rel := range state.relationships {
+				if rel["startNodeId"] == startNodeId && rel["endNodeId"] == endNodeId && rel["type"] == relType {
+					delete(state.relationships, relID)
+					break
+				}
+			}
+			state.mu.Unlock()
+			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+				"compass": map[string]interface{}{
+					"deleteRelationship": map[string]interface{}{"success": true},
 				},
 			}})
 			return

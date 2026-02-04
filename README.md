@@ -172,6 +172,27 @@ See [component_link documentation](docs/resources/component_link.md) for full de
 | `id` | `string` | The unique identifier (ID) of the link |
 | `cloud_id` | `string` | Cloud ID (computed if not provided) |
 
+### `compass_component_relationship`
+
+Manages a directed relationship between two Compass components (e.g. dependency or parent-child).
+
+See [component_relationship documentation](docs/resources/component_relationship.md) for full details.
+
+**Arguments:**
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `start_node_id` | `string` | Yes | ID of the component at the start of the relationship (e.g. the dependent or the child) |
+| `end_node_id` | `string` | Yes | ID of the component at the end (e.g. the one we depend on, or the parent) |
+| `relationship_type` | `string` | Yes | Type of relationship. Valid values: `DEPENDS_ON`, `CHILD_OF` |
+| `cloud_id` | `string` | No | Cloud ID. If not provided, will be auto-detected from tenant |
+
+**Attributes:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | `string` | Composite ID: `start_node_id:end_node_id:relationship_type` |
+
 ## Data Sources
 
 ### `compass_component_types`
@@ -247,6 +268,9 @@ terraform import compass_component.example ari:cloud:compass:...:component/...
 
 # Import a component link (format: component_id:link_id)
 terraform import compass_component_link.repository ari:cloud:compass:...:component/...:1d1bd8b7-2834-438b-b9e3-b63156c57bf3
+
+# Import a component relationship (format: start_node_id:end_node_id:relationship_type)
+terraform import compass_component_relationship.example "ari:cloud:compass:...:component/...:ari:cloud:compass:...:component/...:DEPENDS_ON"
 ```
 
 ## Development

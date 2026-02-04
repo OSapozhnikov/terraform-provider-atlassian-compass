@@ -16,10 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Import by `component_id` or `component_id:cloud_id`. Documentation under `docs/resources/component_labels.md`.
 - **Protected label `synced-with-jsm`** — Compass adds this label when a component is synced with Jira; the provider never removes it:
   - Excluded from remove operations (update and delete) and from state on read, so Terraform does not show perpetual plan drift. It does not need to be listed in `labels` in config.
+- **Resource `compass_component_relationship`** — manage directed relationships between two Compass components:
+  - Arguments: `start_node_id`, `end_node_id` (Required, ForceNew), `relationship_type` (Required, ForceNew; `DEPENDS_ON` or `CHILD_OF`), `cloud_id` (Optional, Computed, ForceNew).
+  - Create: uses GraphQL `createRelationship`; if the API reports the relationship already exists, the provider adopts it into state. Read: fetches component relationships and matches by start/end/type. Delete: uses `deleteRelationship`. No update (all attributes ForceNew).
+  - Resource ID is composite: `start_node_id:end_node_id:relationship_type`. Import uses the same format; when IDs are ARIs (contain colons), the provider parses them correctly (see docs).
+  - Documentation under `docs/resources/component_relationship.md`.
 
 ### Documentation
 
 - `docs/resources/component_labels.md`: argument reference, examples, import, update behavior, note on `synced-with-jsm`.
+- `docs/resources/component_relationship.md`: argument reference, examples, import (composite ID and ARI parsing), direction semantics, "already exists" adoption behavior.
 
 ## [1.1.0] - 2026-02-04
 

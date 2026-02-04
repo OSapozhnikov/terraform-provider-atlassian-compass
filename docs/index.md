@@ -95,6 +95,8 @@ resource "compass_component_link" "repository" {
   - Full docs: [`resources/component.md`](./resources/component.md)
 - `compass_component_link` — Manages a link attached to a Compass component  
   - Full docs: [`resources/component_link.md`](./resources/component_link.md)
+- `compass_component_relationship` — Manages a directed relationship between two components (e.g. DEPENDS_ON, CHILD_OF)  
+  - Full docs: [`resources/component_relationship.md`](./resources/component_relationship.md)
 
 ## Data Sources
 
@@ -130,6 +132,9 @@ terraform import compass_component.example ari:cloud:compass:...:component/...
 
 # Import a component link (format: component_id:link_id)
 terraform import compass_component_link.repository ari:cloud:compass:...:component/...:1d1bd8b7-2834-438b-b9e3-b63156c57bf3
+
+# Import a component relationship (format: start_node_id:end_node_id:relationship_type)
+terraform import compass_component_relationship.example "ari:cloud:compass:...:component/...:ari:cloud:compass:...:component/...:DEPENDS_ON"
 ```
 
 ## GraphQL API

@@ -34,3 +34,15 @@ resource "compass_component_link" "repository" {
   type         = "REPOSITORY"
   url          = var.compass_component_repository_url
 }
+
+resource "compass_component_relationship" "depends_on" {
+  start_node_id     = compass_component.example.id
+  end_node_id       = var.compass_component_target_depends
+  relationship_type = "DEPENDS_ON"
+}
+
+resource "compass_component_relationship" "child_of" {
+  start_node_id     = compass_component.example.id
+  end_node_id       = var.compass_component_target_child
+  relationship_type = "CHILD_OF"
+}

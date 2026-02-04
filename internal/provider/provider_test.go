@@ -2,6 +2,7 @@ package provider
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,7 +15,9 @@ type mockState struct {
 	cloudID         string
 	components      map[string]map[string]interface{}
 	links           map[string]map[string]interface{}
-	componentLabels map[string][]string // componentId -> label names
+	componentLabels map[string][]string               // componentId -> label names
+	relationships   map[string]map[string]interface{} // relationshipId -> { id, startNodeId, endNodeId, type }
+	nextRelID       int
 }
 
 func newMockState() *mockState {
@@ -23,6 +26,8 @@ func newMockState() *mockState {
 		components:      map[string]map[string]interface{}{},
 		links:           map[string]map[string]interface{}{},
 		componentLabels: map[string][]string{},
+		relationships:   map[string]map[string]interface{}{},
+		nextRelID:       1,
 	}
 }
 
@@ -392,6 +397,102 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
 				"compass": map[string]interface{}{
 					"removeComponentLabels": map[string]interface{}{"success": true},
+				},
+			}})
+			return
+		}
+
+		// Create relationship
+		if strings.Contains(q, "createRelationship(") {
+			input, _ := req.Variables["input"].(map[string]interface{})
+			startNodeId, _ := input["startNodeId"].(string)
+			endNodeId, _ := input["endNodeId"].(string)
+			relType := ""
+			if s, ok := input["relationshipType"].(string); ok {
+				relType = s
+			} else if rt, ok := input["relationshipType"].(map[string]interface{}); ok {
+				relType, _ = rt["type"].(string)
+			}
+			state.mu.Lock()
+			relID := fmt.Sprintf("rel-%d", state.nextRelID)
+			state.nextRelID++
+			state.relationships[relID] = map[string]interface{}{
+				"id":          relID,
+				"startNodeId": startNodeId,
+				"endNodeId":   endNodeId,
+				"type":        relType,
+			}
+			state.mu.Unlock()
+			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+				"compass": map[string]interface{}{
+					"createRelationship": map[string]interface{}{
+						"success": true,
+						"createdCompassRelationship": map[string]interface{}{
+							"id":               relID,
+							"startNodeId":      startNodeId,
+							"endNodeId":        endNodeId,
+							"relationshipType": relType,
+						},
+					},
+				},
+			}})
+			return
+		}
+
+		// Get component relationships (GetComponentRelationships) — CompassRelationshipConnectionResult with edges
+		if strings.Contains(q, "GetComponentRelationships") && strings.Contains(q, "relationships") {
+			componentId, _ := req.Variables["componentId"].(string)
+			state.mu.Lock()
+			var edges []map[string]interface{}
+			for _, rel := range state.relationships {
+				if rel["startNodeId"] == componentId {
+					edges = append(edges, map[string]interface{}{
+						"node": map[string]interface{}{
+							"id":               rel["id"],
+							"relationshipType": rel["type"],
+							"startNode":        map[string]interface{}{"id": rel["startNodeId"]},
+							"endNode":          map[string]interface{}{"id": rel["endNodeId"]},
+						},
+					})
+				}
+			}
+			state.mu.Unlock()
+			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+				"compass": map[string]interface{}{
+					"component": map[string]interface{}{
+						"id": componentId,
+						"relationships": map[string]interface{}{
+							"edges": edges,
+						},
+					},
+				},
+			}})
+			return
+		}
+
+		// Delete relationship
+		if strings.Contains(q, "deleteRelationship(") {
+			input, _ := req.Variables["input"].(map[string]interface{})
+			startNodeId, _ := input["startNodeId"].(string)
+			endNodeId, _ := input["endNodeId"].(string)
+			relType := ""
+			if s, ok := input["relationshipType"].(string); ok {
+				relType = s
+			} else if rt, ok := input["relationshipType"].(map[string]interface{}); ok {
+				relType, _ = rt["type"].(string)
+			}
+			state.mu.Lock()
+			// Find and delete relationship by startNodeId, endNodeId, and type
+			for relID, rel := range state.relationships {
+				if rel["startNodeId"] == startNodeId && rel["endNodeId"] == endNodeId && rel["type"] == relType {
+					delete(state.relationships, relID)
+					break
+				}
+			}
+			state.mu.Unlock()
+			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+				"compass": map[string]interface{}{
+					"deleteRelationship": map[string]interface{}{"success": true},
 				},
 			}})
 			return

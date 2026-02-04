@@ -10,17 +10,19 @@ import (
 
 // mockState holds simple in-memory data to emulate GraphQL resources.
 type mockState struct {
-	mu         sync.Mutex
-	cloudID    string
-	components map[string]map[string]interface{}
-	links      map[string]map[string]interface{}
+	mu              sync.Mutex
+	cloudID         string
+	components      map[string]map[string]interface{}
+	links           map[string]map[string]interface{}
+	componentLabels map[string][]string // componentId -> label names
 }
 
 func newMockState() *mockState {
 	return &mockState{
-		cloudID:    "cloud-123",
-		components: map[string]map[string]interface{}{},
-		links:      map[string]map[string]interface{}{},
+		cloudID:         "cloud-123",
+		components:      map[string]map[string]interface{}{},
+		links:           map[string]map[string]interface{}{},
+		componentLabels: map[string][]string{},
 	}
 }
 
@@ -104,6 +106,33 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 					"createComponent": map[string]interface{}{
 						"success":          true,
 						"componentDetails": state.components[id],
+					},
+				},
+			}})
+			return
+		}
+
+		// Get component with labels (used by compass_component_labels)
+		if strings.Contains(q, "GetComponentLabels") && strings.Contains(q, "labels {") {
+			id := ""
+			if v, ok := req.Variables["id"].(string); ok {
+				id = v
+			}
+			state.mu.Lock()
+			labels := state.componentLabels[id]
+			if labels == nil {
+				labels = []string{}
+			}
+			labelMaps := make([]map[string]string, 0, len(labels))
+			for _, n := range labels {
+				labelMaps = append(labelMaps, map[string]string{"name": n})
+			}
+			state.mu.Unlock()
+			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+				"compass": map[string]interface{}{
+					"component": map[string]interface{}{
+						"id":     id,
+						"labels": labelMaps,
 					},
 				},
 			}})
@@ -307,6 +336,62 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
 				"compass": map[string]interface{}{
 					"deleteComponentLink": map[string]interface{}{"success": true},
+				},
+			}})
+			return
+		}
+
+		// Add component labels
+		if strings.Contains(q, "addComponentLabels(") {
+			input, _ := req.Variables["input"].(map[string]interface{})
+			componentId, _ := input["componentId"].(string)
+			labelNamesRaw, _ := input["labelNames"].([]interface{})
+			state.mu.Lock()
+			cur := state.componentLabels[componentId]
+			seen := make(map[string]bool)
+			for _, s := range cur {
+				seen[s] = true
+			}
+			for _, v := range labelNamesRaw {
+				if s, ok := v.(string); ok && s != "" && !seen[s] {
+					seen[s] = true
+					cur = append(cur, s)
+				}
+			}
+			state.componentLabels[componentId] = cur
+			state.mu.Unlock()
+			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+				"compass": map[string]interface{}{
+					"addComponentLabels": map[string]interface{}{"success": true},
+				},
+			}})
+			return
+		}
+
+		// Remove component labels
+		if strings.Contains(q, "removeComponentLabels(") {
+			input, _ := req.Variables["input"].(map[string]interface{})
+			componentId, _ := input["componentId"].(string)
+			labelNamesRaw, _ := input["labelNames"].([]interface{})
+			toRemove := make(map[string]bool)
+			for _, v := range labelNamesRaw {
+				if s, ok := v.(string); ok {
+					toRemove[s] = true
+				}
+			}
+			state.mu.Lock()
+			cur := state.componentLabels[componentId]
+			var newCur []string
+			for _, s := range cur {
+				if !toRemove[s] {
+					newCur = append(newCur, s)
+				}
+			}
+			state.componentLabels[componentId] = newCur
+			state.mu.Unlock()
+			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+				"compass": map[string]interface{}{
+					"removeComponentLabels": map[string]interface{}{"success": true},
 				},
 			}})
 			return

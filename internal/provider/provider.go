@@ -44,8 +44,9 @@ func New() *schema.Provider {
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"compass_component":      resourceComponent(),
-			"compass_component_link": resourceComponentLink(),
+			"compass_component":        resourceComponent(),
+			"compass_component_link":   resourceComponentLink(),
+			"compass_component_labels": resourceComponentLabels(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"compass_component_types": dataSourceComponentTypes(),

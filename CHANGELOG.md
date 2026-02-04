@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-04
+
+### Added
+
+- **Resource `compass_component_labels`** — manage the set of labels on a Compass component:
+  - One resource per component; full list of labels (add/remove via diff).
+  - Arguments: `component_id` (Required, ForceNew), `cloud_id` (Optional, Computed, ForceNew), `labels` (Required, list of strings).
+  - Create: adds all configured labels via `addComponentLabels`. Read: fetches component labels via GraphQL. Update: computes diff and calls `removeComponentLabels` then `addComponentLabels` for changes. Delete: removes only managed labels (system label `synced-with-jsm` is never removed).
+  - Import by `component_id` or `component_id:cloud_id`. Documentation under `docs/resources/component_labels.md`.
+- **Protected label `synced-with-jsm`** — Compass adds this label when a component is synced with Jira; the provider never removes it:
+  - Excluded from remove operations (update and delete) and from state on read, so Terraform does not show perpetual plan drift. It does not need to be listed in `labels` in config.
+
+### Documentation
+
+- `docs/resources/component_labels.md`: argument reference, examples, import, update behavior, note on `synced-with-jsm`.
+
 ## [1.1.0] - 2026-02-04
 
 ### Added

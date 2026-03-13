@@ -92,14 +92,14 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 				return
 			}
 			comp := map[string]interface{}{
-				"__typename": "CompassComponent",
-				"id":         "ari:cloud:compass:" + cloudID + ":component/uuid/euid",
-				"name":       "product-example",
-				"slug":       slug,
+				"__typename":  "CompassComponent",
+				"id":          "ari:cloud:compass:" + cloudID + ":component/uuid/euid",
+				"name":        "product-example",
+				"slug":        slug,
 				"description": nil,
-				"url":        "https://example.atlassian.net/compass/component/euid",
-				"typeId":     "SERVICE",
-				"ownerId":    "",
+				"url":         "https://example.atlassian.net/compass/component/euid",
+				"typeId":      "SERVICE",
+				"ownerId":     "",
 			}
 			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
 				"compass": map[string]interface{}{

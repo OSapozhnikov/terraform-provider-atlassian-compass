@@ -59,15 +59,15 @@ const componentByReferenceQuery = `
 
 // componentResultPayload represents the union CompassComponentResult (CompassComponent | QueryError).
 type componentResultPayload struct {
-	Typename   string `json:"__typename"`
-	ID         string `json:"id,omitempty"`
-	Name       string `json:"name,omitempty"`
-	Slug       string `json:"slug,omitempty"`
+	Typename    string `json:"__typename"`
+	ID          string `json:"id,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Slug        string `json:"slug,omitempty"`
 	Description string `json:"description,omitempty"`
-	URL        string `json:"url,omitempty"`
-	TypeID     string `json:"typeId,omitempty"`
-	OwnerID    string `json:"ownerId,omitempty"`
-	Message    string `json:"message,omitempty"`
+	URL         string `json:"url,omitempty"`
+	TypeID      string `json:"typeId,omitempty"`
+	OwnerID     string `json:"ownerId,omitempty"`
+	Message     string `json:"message,omitempty"`
 }
 
 type componentByIDResponse struct {

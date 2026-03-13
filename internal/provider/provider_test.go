@@ -74,6 +74,41 @@ func startMockGraphQLServer(state *mockState) *httptest.Server {
 			return
 		}
 
+		// componentByReference (data source compass_component by slug)
+		if strings.Contains(q, "componentByReference(") {
+			reference, _ := req.Variables["reference"].(map[string]interface{})
+			slugObj, _ := reference["slug"].(map[string]interface{})
+			slug, _ := slugObj["slug"].(string)
+			cloudID, _ := slugObj["cloudId"].(string)
+			if slug == "" || cloudID == "" {
+				writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+					"compass": map[string]interface{}{
+						"componentByReference": map[string]interface{}{
+							"__typename": "QueryError",
+							"message":    "slug and cloudId required",
+						},
+					},
+				}})
+				return
+			}
+			comp := map[string]interface{}{
+				"__typename": "CompassComponent",
+				"id":         "ari:cloud:compass:" + cloudID + ":component/uuid/euid",
+				"name":       "product-example",
+				"slug":       slug,
+				"description": nil,
+				"url":        "https://example.atlassian.net/compass/component/euid",
+				"typeId":     "SERVICE",
+				"ownerId":    "",
+			}
+			writeJSON(w, http.StatusOK, graphQLResponse{Data: map[string]interface{}{
+				"compass": map[string]interface{}{
+					"componentByReference": comp,
+				},
+			}})
+			return
+		}
+
 		// Tenant to cloudId lookup
 		if strings.Contains(q, "tenantContexts") {
 			// Always return one context with the configured cloudID

@@ -100,6 +100,8 @@ resource "compass_component_link" "repository" {
 
 ## Data Sources
 
+- `compass_component` — Retrieves a single Compass component by ID (Query component) or by slug (Query componentByReference)  
+  - Full docs: [`data-sources/component.md`](./data-sources/component.md)
 - `compass_component_types` — Lists available component types for a Compass site and allows lookups by id or name  
   - Full docs: [`data-sources/component_types.md`](./data-sources/component_types.md)
 

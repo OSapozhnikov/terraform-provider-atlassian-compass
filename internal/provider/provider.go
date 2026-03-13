@@ -50,6 +50,7 @@ func New() *schema.Provider {
 			"compass_component_relationship": resourceComponentRelationship(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
+			"compass_component":       dataSourceComponent(),
 			"compass_component_types": dataSourceComponentTypes(),
 		},
 		ConfigureContextFunc: configureProvider,

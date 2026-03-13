@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-03-13
+
+### Added
+
+- **Data source `compass_component`** — retrieve a single Compass component by ID or by slug:
+  - Lookup by **ID**: uses GraphQL Query `component(id)`; argument `id` (ARI or internal ID).
+  - Lookup by **slug**: uses GraphQL Query `componentByReference(reference: { slug: { slug, cloudId } })`; argument `slug`; `cloud_id` optional when provider `tenant` is set (auto-detected).
+  - Exactly one of `id` or `slug` must be set; validation error if both or neither.
+  - Exported attributes: `id`, `name`, `slug`, `description`, `url`, `type_id`, `owner_id`. Union `CompassComponentResult` (QueryError) handled with clear error message.
+  - Documentation under `docs/data-sources/component.md`; link added in `docs/index.md`.
+- **Unit tests for `compass_component` data source** — `TestDataSourceComponent_ByID`, `TestDataSourceComponent_BySlug`, validation tests for both-id-and-slug and neither-id-nor-slug; mock server extended with `componentByReference` handler.
+
+### Documentation
+
+- `docs/data-sources/component.md`: argument reference, example usage (by ID, by slug with tenant, by slug with explicit cloud_id), attributes reference, notes on mutual exclusivity and cloud_id/tenant.
+
 ## [1.2.0] - 2026-02-04
 
 ### Added
